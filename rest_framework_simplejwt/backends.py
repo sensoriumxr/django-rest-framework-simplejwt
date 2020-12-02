@@ -21,6 +21,7 @@ class TokenBackend:
 
         self.algorithm = algorithm
         self.rotation = rotation
+        self.signing_key = signing_key
         self.audience = audience
         self.issuer = issuer
         if algorithm.startswith('HS') and not rotation:
@@ -30,10 +31,6 @@ class TokenBackend:
         if self.rotation:
             self._validate_rotation_settings(algorithm, signing_key, verifying_key)
             self.verifying_key = verifying_key[0:2]
-            self.signing_key = signing_key[1]
-        else:
-            self.signing_key = signing_key
-
 
     def _validate_algorithm(self, algorithm):
         """
@@ -47,10 +44,10 @@ class TokenBackend:
             raise TokenBackendError(format_lazy(_("You must have cryptography installed to use {}."), algorithm))
     
     def _validate_rotation_settings(self, algorithm, signing_key, verifying_key):
-        if not isinstance(signing_key, list) or len(signing_key) != 3:
-            raise TokenBackendError(_('Signing keys should be list of len 3 with rotation on'))
         if not isinstance(verifying_key, list) or len(verifying_key) != 3:
             raise TokenBackendError(_('Verifying keys should be list of len 3 with rotation on'))
+        if signing_key.public() != verifying_key[1]:
+            raise TokenBackendError(_('Signing key\'s public key is not current verify key'))
         if not algorithm.startswith('RS'):
             raise TokenBackendError(_('Rotation possible only for assymetric algorithms'))
 
