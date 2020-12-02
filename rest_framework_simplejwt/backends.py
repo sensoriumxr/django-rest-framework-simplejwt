@@ -21,7 +21,6 @@ class TokenBackend:
 
         self.algorithm = algorithm
         self.rotation = rotation
-        self.signing_key = signing_key
         self.audience = audience
         self.issuer = issuer
         if algorithm.startswith('HS') and not rotation:
@@ -32,6 +31,8 @@ class TokenBackend:
             self._validate_rotation_settings(algorithm, signing_key, verifying_key)
             self.verifying_key = verifying_key[0:2]
             self.signing_key = signing_key[1]
+        else:
+            self.signing_key = signing_key
 
 
     def _validate_algorithm(self, algorithm):
@@ -78,7 +79,10 @@ class TokenBackend:
         Raises a `TokenBackendError` if the token is malformed, if its
         signature check fails, or if its 'exp' claim indicates it has expired.
         """
-        verifying_keys = list(self.verifying_key)
+        if not isinstance(self.verifying_key, list):
+            verifying_keys = [self.verifying_key]
+        else:
+            verifying_keys = self.verifying_key
 
         last_key = verifying_keys[-1]
         for key in verifying_keys:
