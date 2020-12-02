@@ -17,6 +17,7 @@ DEFAULTS = {
     'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
+    'OIDC_ROTATE': False,
     'SIGNING_KEY': settings.SECRET_KEY,
     'VERIFYING_KEY': None,
     'AUDIENCE': None,

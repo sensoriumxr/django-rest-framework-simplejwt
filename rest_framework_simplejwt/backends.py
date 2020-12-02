@@ -16,17 +16,23 @@ ALLOWED_ALGORITHMS = (
 
 
 class TokenBackend:
-    def __init__(self, algorithm, signing_key=None, verifying_key=None, audience=None, issuer=None):
+    def __init__(self, algorithm, signing_key=None, verifying_key=None, audience=None, issuer=None, rotation=None):
         self._validate_algorithm(algorithm)
 
         self.algorithm = algorithm
+        self.rotation = rotation
         self.signing_key = signing_key
         self.audience = audience
         self.issuer = issuer
-        if algorithm.startswith('HS'):
+        if algorithm.startswith('HS') and not rotation:
             self.verifying_key = signing_key
         else:
             self.verifying_key = verifying_key
+        if self.rotation:
+            self._validate_rotation_settings(algorithm, signing_key, verifying_key)
+            self.verifying_key = verifying_key[0:2]
+            self.signing_key = signing_key[1]
+
 
     def _validate_algorithm(self, algorithm):
         """
@@ -38,6 +44,14 @@ class TokenBackend:
 
         if algorithm in algorithms.requires_cryptography and not algorithms.has_crypto:
             raise TokenBackendError(format_lazy(_("You must have cryptography installed to use {}."), algorithm))
+    
+    def _validate_rotation_settings(self, algorithm, signing_key, verifying_key):
+        if not isinstance(signing_key, list) or len(signing_key) != 3:
+            raise TokenBackendError(_('Signing keys should be list of len 3 with rotation on'))
+        if not isinstance(verifying_key, list) or len(verifying_key) != 3:
+            raise TokenBackendError(_('Verifying keys should be list of len 3 with rotation on'))
+        if not algorithm.startswith('RS'):
+            raise TokenBackendError(_('Rotation possible only for assymetric algorithms'))
 
     def encode(self, payload):
         """
@@ -59,16 +73,22 @@ class TokenBackend:
     def decode(self, token, verify=True):
         """
         Performs a validation of the given token and returns its payload
-        dictionary.
+        dictionary. 
 
         Raises a `TokenBackendError` if the token is malformed, if its
         signature check fails, or if its 'exp' claim indicates it has expired.
         """
-        try:
-            return jwt.decode(token, self.verifying_key, algorithms=[self.algorithm], verify=verify,
-                              audience=self.audience, issuer=self.issuer,
-                              options={'verify_aud': self.audience is not None})
-        except InvalidAlgorithmError as ex:
-            raise TokenBackendError(_('Invalid algorithm specified')) from ex
-        except InvalidTokenError:
-            raise TokenBackendError(_('Token is invalid or expired'))
+        verifying_keys = list(self.verifying_key)
+
+        last_key = verifying_keys[-1]
+        for key in verifying_keys:
+            try:
+                return jwt.decode(token, key, algorithms=[self.algorithm], verify=verify,
+                                audience=self.audience, issuer=self.issuer,
+                                options={'verify_aud': self.audience is not None})
+            except InvalidAlgorithmError as ex:
+                raise TokenBackendError(_('Invalid algorithm specified')) from ex
+            except InvalidTokenError:     
+                if key == last_key:
+                    raise TokenBackendError(_('Token is invalid or expired'))
+                continue
