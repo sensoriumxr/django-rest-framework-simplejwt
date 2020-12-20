@@ -46,7 +46,7 @@ class TokenBackend:
     def _validate_rotation_settings(self, algorithm, signing_key, verifying_key):
         if not isinstance(verifying_key, list) or len(verifying_key) != 3:
             raise TokenBackendError(_('Verifying keys should be list of len 3 with rotation on'))
-        if signing_key.public() != verifying_key[1]:
+        if signing_key.public_key() != verifying_key[1]:
             raise TokenBackendError(_('Signing key\'s public key is not current verify key'))
         if not algorithm.startswith('RS'):
             raise TokenBackendError(_('Rotation possible only for assymetric algorithms'))
