@@ -1,5 +1,4 @@
 import jwt
-import logging
 from django.utils.translation import gettext_lazy as _
 from jwt import InvalidAlgorithmError, InvalidTokenError, algorithms
 
@@ -18,7 +17,6 @@ ALLOWED_ALGORITHMS = (
 
 class TokenBackend:
     def __init__(self, algorithm, signing_key=None, verifying_key=None, audience=None, issuer=None, rotation=None):
-        logging.critical(signing_key)
         self._validate_algorithm(algorithm)
 
         self.algorithm = algorithm
