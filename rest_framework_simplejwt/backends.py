@@ -18,6 +18,7 @@ ALLOWED_ALGORITHMS = (
 
 class TokenBackend:
     def __init__(self, algorithm, signing_key=None, verifying_key=None, audience=None, issuer=None, rotation=None):
+        logging.critical(signing_key)
         self._validate_algorithm(algorithm)
 
         self.algorithm = algorithm
